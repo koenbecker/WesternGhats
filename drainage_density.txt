@@ -1,0 +1,40 @@
+
+DEM = GRIDobj();
+DEM_projected = reproject2utm(DEM,90)
+
+
+oceanMask = DEM_projected.Z <= 0;
+DEM_projected.Z(oceanMask) = NaN;
+imageschs(DEM_projected);
+
+
+kernelSize = 9999;
+
+
+FD = FLOWobj(DEM_projected, 'preprocess','carve');
+FA = flowacc(FD);
+logFA = log10(FA);
+
+
+min_Area = 5e6;
+S = STREAMobj(FD,'minarea',min_Area,'unit','map');
+
+D = drainagedensity(S, FD, 'nal');
+V = mapfromnal(FD, S, D);
+
+imageschs(DEM_projected, V, ...
+    'colormap', ttscm('davos'), ...      
+    'ticklabels', 'nice', ...
+    'tickstokm', true, ...
+    'caxis', [0, 4e-4]);                  
+
+SB = ScaleBar('color', 'black', ...
+              'xyunit', 'km', ...
+              'displayunit', 'km');
+SB.location = 'southwest';
+
+cb = colorbar;
+
+title('Drainage Density Map', 'FontSize', 14, 'FontWeight', 'bold');
+
+

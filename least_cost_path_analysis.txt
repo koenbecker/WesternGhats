@@ -1,0 +1,200 @@
+DEM = GRIDobj();
+DEM_projected = reproject2utm(DEM,90)
+
+
+oceanMask = DEM_projected.Z <= 0;
+DEM_projected.Z(oceanMask) = NaN;
+imageschs(DEM_projected);
+
+
+kernelSize = 9999;
+
+
+slope = gradient8(DEM_projected,'degree');
+
+FD = FLOWobj(DEM_projected, 'preprocess','carve');
+FA = flowacc(FD);
+logFA = log10(FA);
+
+min_Area = 100e6;
+S = STREAMobj(FD,'minarea',min_Area,'unit','map');
+
+stream_raster = STREAMobj2GRIDobj(S);
+norm_slope = rescale(slope.Z);
+
+stream_weight = 0.75;  
+cost_raster = norm_slope + stream_weight * stream_raster.Z;
+cost_raster(cost_raster < 0.01) = 0.01;
+
+
+
+
+cost = DEM_projected;
+cost.Z = cost_raster;
+[nrows, ncols] = size(cost_raster);
+
+dRow = [-1 -1 -1  0  0  1  1  1];
+dCol = [-1  0  1 -1  1 -1  0  1];
+nDirs = numel(dRow);
+
+maxNodes = nrows * ncols;
+estMaxEdges = maxNodes * nDirs;
+I = zeros(estMaxEdges, 1);  
+J = zeros(estMaxEdges, 1);  
+S = zeros(estMaxEdges, 1);  
+
+edgeCount = 0;
+
+for row = 1:nrows
+    for col = 1:ncols
+        fromIdx = sub2ind([nrows, ncols], row, col);
+        for k = 1:nDirs
+            r = row + dRow(k);
+            c = col + dCol(k);
+            if r >= 1 && r <= nrows && c >= 1 && c <= ncols
+                toIdx = sub2ind([nrows, ncols], r, c);
+                cost1 = cost_raster(row, col);
+cost2 = cost_raster(r, c);
+
+if isnan(cost1) || isnan(cost2)
+    continue  
+end
+
+avg_cost = (cost1 + cost2) / 2;
+                if abs(dRow(k)) + abs(dCol(k)) == 2  
+                    avg_cost = avg_cost * sqrt(2);
+                end
+                edgeCount = edgeCount + 1;
+                I(edgeCount) = fromIdx;
+                J(edgeCount) = toIdx;
+                S(edgeCount) = avg_cost;
+            end
+        end
+    end
+end
+
+I = I(1:edgeCount);
+J = J(1:edgeCount);
+S = S(1:edgeCount);
+
+numNaNs = sum(isnan(S));
+if numNaNs > 0
+    warning('%d NaN edge weights found in S. Removing them.', numNaNs);
+    
+    validIdx = ~isnan(S);
+    I = I(validIdx);
+    J = J(validIdx);
+    S = S(validIdx);
+end
+
+G = sparse(I, J, S, maxNodes, maxNodes);
+
+
+
+
+
+
+
+
+nPaths = 10000;
+paths = cell(nPaths, 1);
+pathCosts = nan(nPaths, 1);
+
+saveInterval = 50;  
+
+for k = 1:nPaths
+    idx = randperm(numel(validInds), 2);
+    startIdx = validInds(idx(1));
+    endIdx = validInds(idx(2));
+    
+    [pathIdx, totalCost] = shortestpath(Ggraph, startIdx, endIdx);
+    
+    if ~isempty(pathIdx)
+        [rowPath, colPath] = ind2sub([nrows, ncols], pathIdx);
+        [xPath, yPath] = pix2map(DEM_projected.refmat, rowPath, colPath);
+
+        paths{k} = [xPath(:), yPath(:)];
+        pathCosts(k) = totalCost;
+    else
+        paths{k} = [];
+        pathCosts(k) = NaN;
+    end
+    
+    
+    if mod(k, saveInterval) == 0
+        save('paths_backup.mat', 'paths', 'pathCosts', '-v7.3');
+        fprintf('Saved backup at iteration %d\n', k);
+    end
+end
+
+save('paths_final.mat', 'paths', 'pathCosts', '-v7.3');
+
+
+
+
+
+
+figure
+imageschs(DEM_projected, cost, 'colormap', ttscm('bilbao'));  
+hold on
+
+nPlot = numel(paths); 
+for k = 1:nPlot
+    if ~isempty(paths{k})
+        plot(paths{k}(:,1), paths{k}(:,2), 'r-', 'LineWidth', 1);
+    end
+end
+
+axis image tight
+title(sprintf('Least-Cost Paths', nPlot));
+
+
+
+
+h = figure();
+set(h, 'Units', 'normalized', 'Position', [0 0 1 1]);
+
+imageschs(DEM_projected, [], ...
+    'colormap', ttscm('grayC'), ...
+    'colorbar', false);
+
+hold on;
+
+nPlot = numel(paths);
+for k = 1:nPlot
+    if ~isempty(paths{k})
+        x = paths{k}(:,1);
+        y = paths{k}(:,2);
+        line(x, y, 'Color', [1 0 0 0.05], 'LineWidth', 1);  
+    end
+end
+
+SB = ScaleBar('color', 'black', ...
+              'xyunit', 'm', ...
+              'displayunit', 'km');
+SB.location = 'southwest';
+
+axis image tight
+
+ax = gca;
+ax.XColor = [0 0 0];          
+ax.YColor = [0 0 0];
+ax.TickDir = 'out';           
+ax.Box = 'off';               
+ax.FontSize = 12;             
+ax.XMinorTick = 'off';        
+ax.YMinorTick = 'off';
+
+title(sprintf('Least-Cost Paths', nPlot), 'FontSize', 14, 'FontWeight', 'bold');
+
+
+
+
+
+
+
+
+
+
+
+

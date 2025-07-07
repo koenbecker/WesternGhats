@@ -1,0 +1,107 @@
+DEM = GRIDobj();
+DEM_projected = reproject2utm(DEM,90)
+
+
+oceanMask = DEM_projected.Z <= 0;
+DEM_projected.Z(oceanMask) = NaN;
+imageschs(DEM_projected);
+
+
+DEMc = crop(DEM_projected, 'interactive');
+imageschs(DEMc)
+
+kernelSize = 9999;
+
+FD_c  = FLOWobj(DEMc,'preprocess','carve');
+A_c  = flowacc(FD_c);
+S_c = STREAMobj(FD_c,'minarea',10e6,'unit','map');
+ord_c = streamorder(S_c);
+
+segment_c = networksegment(S_c, FD_c, DEMc, A_c, 0.5);
+theta_c = segment_c.angle;
+
+ord_seg_c = segment_c.strahler;
+theta_c = segment_c.angle;
+
+
+max_order = 5;
+
+
+%%%%% 
+% If you want to crop a polygon do this:
+% open crop.m in @GRIDobj
+% replace imrect line 130  with impoly
+% add this after line 147 
+%            IXnan = find(~MASK);
+%            DEM.Z(IXnan) = nan;
+%%%%%
+
+figure('Units', 'normalized', 'Position', [0.1 0.1 0.9 0.85]);
+
+mainLayout = tiledlayout(3, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+nexttile(mainLayout, [3, 1]); 
+imageschs(DEMc, [], 'colormap', ttscm('batlow'));
+hold on;
+plot(S_c, 'Color', 'b'); 
+hold off;
+title('Cropped DEM with Stream Network');
+
+for i = 1:max_order
+    nexttile(mainLayout); 
+    polarhistogram(theta_c(ord_seg_c == i), ...
+                   'BinEdges', 0:pi/18:2*pi, ...
+                   'Normalization', 'probability');
+    title(['Volcanic - Order ', num2str(i)]);
+    ax = gca;
+    ax.ThetaZeroLocation = 'top';
+    ax.ThetaDir = 'clockwise';
+end
+
+sgtitle(mainLayout, 'Polarhistograms of northern Western Ghats');
+
+
+
+DEMc = crop(DEM_projected, 'interactive');
+imageschs(DEMc)
+
+kernelSize = 9999;
+
+FD_c  = FLOWobj(DEMc,'preprocess','carve');
+A_c  = flowacc(FD_c);
+S_c = STREAMobj(FD_c,'minarea',10e6,'unit','map');
+ord_c = streamorder(S_c);
+
+segment_c = networksegment(S_c, FD_c, DEMc, A_c, 0.5);
+theta_c = segment_c.angle;
+
+ord_seg_c = segment_c.strahler;
+theta_c = segment_c.angle;
+
+
+max_order = 5;
+
+figure('Units', 'normalized', 'Position', [0.1 0.1 0.9 0.85]);
+
+mainLayout = tiledlayout(3, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+nexttile(mainLayout, [3, 1]); 
+imageschs(DEMc, [], 'colormap', ttscm('batlow'));
+hold on;
+plot(S_c, 'Color', 'b'); 
+hold off;
+title('Cropped DEM with Stream Network');
+
+for i = 1:max_order
+    nexttile(mainLayout); 
+    polarhistogram(theta_c(ord_seg_c == i), ...
+                   'BinEdges', 0:pi/18:2*pi, ...
+                   'Normalization', 'probability', ...
+                   'FaceColor', 'r');
+    title(['Metamorphic - Order ', num2str(i)]);
+    ax = gca;
+    ax.ThetaZeroLocation = 'top';
+    ax.ThetaDir = 'clockwise';
+end
+
+sgtitle(mainLayout, 'Polarhistograms of southern Western Ghats');

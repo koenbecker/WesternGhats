@@ -1,0 +1,93 @@
+DEM = GRIDobj();
+DEM_projected = reproject2utm(DEM,90)
+
+
+oceanMask = DEM_projected.Z <= 0;
+DEM_projected.Z(oceanMask) = NaN;
+imageschs(DEM_projected);
+kernelSize = 9999;
+
+
+FD  = FLOWobj(DEM_projected,'preprocess','carve');
+A  = flowacc(FD);
+S = STREAMobj(FD,'minarea',10e6,'unit','map');
+
+
+Smod = klargestconncomps(S);  
+
+K = 20
+Z = smooth(Smod,DEM_projected,'K',K);
+h = figure();
+set(h,'Units','normalized','Position',[0 0 1 .5]); 
+subplot(1,2,1)
+imageschs(DEM_projected);    
+hold on
+plot(Smod,'k-')    
+subplot(1,2,2)
+plotdz(Smod,Z);
+Z2 = crs(Smod,DEM_projected,'K',K,'tau',0.2);
+plotdz(Smod,Z2);
+
+
+theta_ref = 0.45;
+Ksn = ksn(S,DEM_projected,A,theta_ref,K);
+
+
+h = figure();
+set(h, 'Units', 'normalized', 'Position', [0 0 1 1]);
+DEM_projected.Z(isnan(DEM_projected.Z)) = NaN;
+blackToWhite = [linspace(0, 1, 100)' linspace(0, 1, 100)' linspace(0, 1, 100)'];
+imageschs(DEM_projected, [], ...
+    'colormap', blackToWhite, ...
+    'colorbar', false);
+hold on;
+plotc(S, Ksn);
+cb = colorbar;
+caxis([0, 80]);
+SB = ScaleBar('color', 'black', ...
+              'xyunit', 'm', ...
+              'displayunit', 'km');
+SB.location = 'southwest';
+title('Steepness Index (K_{sn})', 'FontSize', 14, 'FontWeight', 'bold');
+
+
+
+
+
+baseLevel = 1
+DEMb = DEM_projected > baseLevel;
+imageschs(DEM_projected,DEMb)
+
+Con  = griddedcontour(DEM_projected,[baseLevel baseLevel],true);
+Schi = modify(S,'upstreamto',Con);
+chi = chitransform(Schi,A,'mn',theta_ref);
+
+
+figure('Units', 'normalized', 'Position', [0.05, 0.05, 0.9, 0.85]);
+
+ax1 = axes('Position', [0.05, 0.1, 0.62, 0.8]);  % [left, bottom, width, height]
+imageschs(DEM_projected, [], 'colormap', gray(250), 'colorbar', false);
+hold on;
+plotc(Schi, chi, 'LineWidth', 1);
+colormap(ax1, flipud(ttscm('roma', 250)));
+cb1 = colorbar(ax1, 'Location', 'eastoutside');
+cb1.Label.String = 'Chi Index';
+title('\chi Index Map', 'FontSize', 14, 'FontWeight', 'bold');
+
+SB = ScaleBar('color', 'black', 'xyunit', 'm', 'displayunit', 'km');
+SB.location = 'southwest';
+
+ax2 = axes('Position', [0.7, 0.55, 0.25, 0.35]);  % [left, bottom, width, height]
+imageschs(DEMc, slope, 'colormap', ttscm('bilbao'), 'ticklabels', 'nice', 'tickstokm', true);
+colorbar('eastoutside');
+title('Slope (°)');
+
+ax3 = axes('Position', [0.7, 0.1, 0.25, 0.35]);  % [left, bottom, width, height]
+imageschs(DEMc, locrel, 'colormap', ttscm('grayC'), 'ticklabels', 'nice', 'tickstokm', true);
+colorbar('eastoutside');
+title('Local Relief (m)');
+
+
+
+
+

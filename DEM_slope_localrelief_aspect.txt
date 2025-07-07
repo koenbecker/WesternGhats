@@ -1,0 +1,51 @@
+
+DEM = GRIDobj();
+DEM_projected = reproject2utm(DEM,90)
+
+
+oceanMask = DEM_projected.Z <= 0;
+DEM_projected.Z(oceanMask) = NaN;
+imageschs(DEM_projected);
+
+
+slope = gradient8(DEM_projected,'degree');  
+aspect_grid = aspect(DEM_projected);
+locrel = localtopography(DEM_projected,500);
+
+
+figure()
+set(gcf,'Units','normalized','Position',[0 0 1 1]);
+
+ax(1) = subplot(1, 4, 1);
+imageschs(DEM_projected, [], 'colormap', ttscm('batlow'), 'ticklabels', 'nice', 'tickstokm', true);
+SB = ScaleBar('color', 'black', 'xyunit', 'km', 'displayunit', 'km');
+SB.location = 'southwest';
+colorbar;
+l(1) = subplotlabel(ax(1), 'Elevation (m)', 'location', 'northwest', 'color', 'k');
+label_text = findobj(ax(1), 'Type', 'text', 'String', 'Elevation (m)');
+set(label_text, 'BackgroundColor', 'white', 'Margin', 2);
+title('Digital Elevation Model');
+
+ax(2) = subplot(1, 4, 2);
+imageschs(DEM_projected, slope, 'colormap', ttscm('bilbao'), 'ticklabels', 'nice', 'tickstokm', true);
+colorbar;
+l(2) = subplotlabel(ax(2), 'Slope (°)', 'location', 'northwest', 'color', 'k');
+label_text = findobj(ax(2), 'Type', 'text', 'String', 'Slope (°)');
+set(label_text, 'BackgroundColor', 'white', 'Margin', 2);
+title('Slope');
+
+ax(3) = subplot(1, 4, 3);
+imageschs(DEM_projected, locrel, 'colormap', ttscm('grayC'), 'ticklabels', 'nice', 'tickstokm', true);
+colorbar;
+l(3) = subplotlabel(ax(3), 'Local Relief (m)', 'location', 'northwest', 'color', 'k');
+label_text = findobj(ax(3), 'Type', 'text', 'String', 'Local Relief (m)');
+set(label_text, 'BackgroundColor', 'white', 'Margin', 2);
+title('Local Relief');
+
+ax(4) = subplot(1, 4, 4);
+imageschs(DEM_projected, aspect_grid, 'colormap', ttscm('vikO'), 'ticklabels', 'nice', 'tickstokm', true);
+colorbar;
+l(4) = subplotlabel(ax(4), 'Aspect (°)', 'location', 'northwest', 'color', 'k');
+label_text = findobj(ax(4), 'Type', 'text', 'String', 'Aspect (°)');
+set(label_text, 'BackgroundColor', 'white', 'Margin', 2);
+title('Aspect Map');

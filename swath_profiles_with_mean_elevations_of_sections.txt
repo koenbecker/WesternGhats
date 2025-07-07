@@ -1,0 +1,225 @@
+
+DEM = GRIDobj();
+DEM_projected = reproject2utm(DEM,90)
+
+
+oceanMask = DEM_projected.Z <= 0;
+DEM_projected.Z(oceanMask) = NaN;
+imageschs(DEM_projected);
+
+
+SW1 = SWATHobj(DEM_projected,'width',50000);
+SW2 = SWATHobj(DEM_projected,'width',50000);
+SW3 = SWATHobj(DEM_projected,'width',50000);
+SW4 = SWATHobj(DEM_projected,'width',50000);
+SW5 = SWATHobj(DEM_projected,'width',50000);
+SW6 = SWATHobj(DEM_projected,'width',50000);
+SW7 = SWATHobj(DEM_projected,'width',15000);
+
+
+len1 = max(SW1.distx);
+len2 = max(SW2.distx);
+len3 = max(SW3.distx);
+len4 = max(SW4.distx);
+len5 = max(SW5.distx);
+len6 = max(SW6.distx);
+
+
+Lgroup1 = min([len1, len2, len3]);
+Lgroup2 = min([len4, len5, len6]);
+
+
+figure()
+set(gcf, 'Visible', 'on', 'units', 'normalized', 'outerposition', [0.05 0.05 0.90 0.90])
+tiledlayout(4, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+swath_colors = [
+    1     0     0      % Red for SW1
+    0     0     1      % Blue for SW2
+    1     0.647 0      % Orange for SW3
+    1     1     0      % Yellow for SW4
+    1     0     1      % Magenta for SW5
+    0     1     1      % Cyan for SW6
+    0     0     0      % Black for SW7 
+];
+
+ax1 = nexttile(1, [3, 1]);
+axes(ax1);
+imageschs(DEM_projected, [], 'colormap', landcolor, 'colorbarylabel', 'Elevation');
+hold on
+
+h_SW1 = plot(SW1);  
+h_SW2 = plot(SW2);  
+h_SW3 = plot(SW3);  
+h_SW4 = plot(SW4);  
+h_SW5 = plot(SW5);  
+h_SW6 = plot(SW6);  
+h_SW7 = plot(SW7);  
+
+set(h_SW1, 'Color', swath_colors(1, :));
+set(h_SW2, 'Color', swath_colors(2, :));
+set(h_SW3, 'Color', swath_colors(3, :));
+set(h_SW4, 'Color', swath_colors(4, :));
+set(h_SW5, 'Color', swath_colors(5, :));
+set(h_SW6, 'Color', swath_colors(6, :));
+set(h_SW7, 'Color', swath_colors(7, :));
+
+hold off
+title('DEM with SWATHs')
+legend off;
+
+hold(ax1, 'on');
+
+
+scalebar_length_km = 250;                         
+scalebar_length_m = scalebar_length_km * 1000;   
+
+xlims = xlim(ax1);
+ylims = ylim(ax1);
+
+x_start = xlims(1) + 0.05 * range(xlims);
+x_end   = x_start + scalebar_length_m;
+y_level = ylims(1) + 0.05 * range(ylims);
+
+line([x_start x_end], [y_level y_level], ...
+    'Color', 'k', 'LineWidth', 2, 'Parent', ax1);
+
+text(mean([x_start x_end]), y_level - 0.01 * range(ylims), ...
+    sprintf('%d km', scalebar_length_km), ...
+    'HorizontalAlignment', 'center', ...
+    'VerticalAlignment', 'top', ...
+    'FontSize', 9, ...
+    'Color', 'k', ...
+    'Parent', ax1);
+
+hold(ax1, 'off');
+
+
+
+nexttile(2)
+h1 = plotdz(SW1); h1(1).LineWidth = 1.5;
+set(h1(1), 'Color', swath_colors(1, :));
+xlim([0 Lgroup1]); ylim([0 2500])
+xlabel('Distance along profile (m)'); ylabel('Elevation (m)')
+
+nexttile(3)
+h2 = plotdz(SW2); h2(1).LineWidth = 1.5;
+set(h2(1), 'Color', swath_colors(2, :));
+xlim([0 Lgroup1]); ylim([0 2500])
+xlabel('Distance along profile (m)'); ylabel('Elevation (m)')
+
+nexttile(5)
+h3 = plotdz(SW3); h3(1).LineWidth = 1.5;
+set(h3(1), 'Color', swath_colors(3, :));
+xlim([0 Lgroup1]); ylim([0 2500])
+xlabel('Distance along profile (m)'); ylabel('Elevation (m)')
+
+nexttile(6)
+h4 = plotdz(SW4); h4(1).LineWidth = 1.5;
+set(h4(1), 'Color', swath_colors(4, :));
+xlim([0 Lgroup2]); ylim([0 2500])
+xlabel('Distance along profile (m)'); ylabel('Elevation (m)')
+
+nexttile(8)
+h5 = plotdz(SW5); h5(1).LineWidth = 1.5;
+set(h5(1), 'Color', swath_colors(5, :));
+xlim([0 Lgroup2]); ylim([0 2500])
+xlabel('Distance along profile (m)'); ylabel('Elevation (m)')
+
+nexttile(9)
+h6 = plotdz(SW6); h6(1).LineWidth = 1.5;
+set(h6(1), 'Color', swath_colors(6, :));
+xlim([0 Lgroup2]); ylim([0 2500])
+xlabel('Distance along profile (m)'); ylabel('Elevation (m)')
+
+
+ax_SW7 = nexttile([1, 3]);  
+h7 = plotdz(SW7); 
+h7(1).LineWidth = 1.5;
+set(h7(1), 'Color', swath_colors(7, :));
+ylim([0 2500])
+xlabel('Distance along profile (m)'); 
+ylabel('Elevation (m)')
+
+hold on
+xline1 = 600000;
+xline2 = 1100000;
+
+xline(xline1, '--k', 'LineWidth', 1, 'HandleVisibility', 'off');
+xline(xline2, '--k', 'LineWidth', 1, 'HandleVisibility', 'off');
+
+text(xline1/2, 2400, 'Section 1', 'HorizontalAlignment', 'center', 'FontSize', 9);
+text((xline1 + xline2)/2, 2400, 'Section 2', 'HorizontalAlignment', 'center', 'FontSize', 9);
+text((xline2 + max(SW7.distx))/2, 2400, 'Section 3', 'HorizontalAlignment', 'center', 'FontSize', 9);
+
+
+
+
+
+x_vals = SW7.distx;
+elevation_vals = SW7.Z;  
+
+mean_elev_profile = mean(elevation_vals, 1, 'omitnan'); 
+x_profile = x_vals;
+
+
+mask1 = x_profile <= 460000;
+mask2 = x_profile > 460000 & x_profile <= 1100000;
+mask3 = x_profile > 1100000;
+
+elev1 = mean_elev_profile(mask1);
+elev2 = mean_elev_profile(mask2);
+elev3 = mean_elev_profile(mask3);
+
+
+mean1 = mean(elev1);
+std1 = std(elev1);
+
+mean2 = mean(elev2);
+std2 = std(elev2);
+
+mean3 = mean(elev3);
+std3 = std(elev3);
+
+
+fprintf('Section 1 (x ≤ 460000): Mean Elevation = %.2f m, Std Dev = %.2f m\n', mean1, std1);
+fprintf('Section 2 (460000 < x ≤ 1100000): Mean Elevation = %.2f m, Std Dev = %.2f m\n', mean2, std2);
+fprintf('Section 3 (x > 1100000): Mean Elevation = %.2f m, Std Dev = %.2f m\n', mean3, std3);
+
+
+
+
+
+sections = {'Section 1', 'Section 2', 'Section 3'};
+
+means = [mean1, mean2, mean3];
+stds  = [std1, std2, std3];
+
+bar_colors = [
+    0.2 0.6 0.8;  % Light blue
+    0.3 0.7 0.4;  % Greenish
+    0.9 0.6 0.2   % Orange
+];
+
+figure;
+b = bar(means, 'FaceColor', 'flat'); 
+hold on;
+
+for k = 1:3
+    b.CData(k, :) = bar_colors(k, :);
+end
+
+errorbar(1:3, means, stds, 'k', 'linestyle', 'none', 'LineWidth', 1.5);
+
+for k = 1:3
+    text(k + 0.1, means(k), sprintf('%.1f m', means(k)), ...
+        'HorizontalAlignment', 'left', ...
+        'VerticalAlignment', 'middle', ...
+        'FontSize', 11, ...
+        'FontWeight', 'bold');
+end
+
+set(gca, 'XTickLabel', sections, 'FontSize', 12);
+ylabel('Mean Elevation (m)');
+title('Mean Elevation of Swath Sections');
+grid on;

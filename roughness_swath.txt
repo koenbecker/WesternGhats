@@ -1,0 +1,156 @@
+DEM = GRIDobj();
+DEM_projected = reproject2utm(DEM,90)
+
+
+oceanMask = DEM_projected.Z <= 0;
+DEM_projected.Z(oceanMask) = NaN;
+imageschs(DEM_projected);
+
+
+rough = roughness(DEM_projected, 'roughness');
+roughTransformed = log10(rough + 1);
+figure;
+imageschs(DEM_projected, roughTransformed, 'colormap', ttscm('batlow'));  
+title('Ruggedness Index');
+colorbar;
+
+
+SW1 = SWATHobj(roughTransformed, 'width', 50000);
+SW2 = SWATHobj(roughTransformed, 'width', 50000);
+SW3 = SWATHobj(roughTransformed, 'width', 50000);
+SW4 = SWATHobj(roughTransformed, 'width', 50000);
+SW5 = SWATHobj(roughTransformed, 'width', 50000);
+SW6 = SWATHobj(roughTransformed, 'width', 50000);
+SW7 = SWATHobj(roughTransformed, 'width', 50000);
+
+
+len1 = max(SW1.distx);
+len2 = max(SW2.distx);
+len3 = max(SW3.distx);
+len4 = max(SW4.distx);
+len5 = max(SW5.distx);
+len6 = max(SW6.distx);
+
+
+Lgroup1 = min([len1, len2, len3]);
+Lgroup2 = min([len4, len5, len6]);
+
+
+figure()
+set(gcf, 'Visible', 'on', 'units', 'normalized', 'outerposition', [0.05 0.05 0.90 0.90])
+tiledlayout(4, 3, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+swath_colors = [
+    1   0     0     % Red for SW1
+    0   0     1     % Blue for SW2
+    1   0.647 0     % Orange for SW3
+    1   1     0     % Yellow for SW4
+    1   0     1     % Magenta for SW5
+    0   1     1     % Cyan for SW6
+    0   0     0     % Black for SW7 
+];
+
+ax1 = nexttile(1, [3, 1]);  
+axes(ax1);
+
+imageschs(DEM_projected, roughTransformed, 'colormap', ttscm('batlow'), 'colorbarylabel', 'Terrain Roughness');
+
+hold on
+set(plot(SW1), 'Color', swath_colors(1, :));
+set(plot(SW2), 'Color', swath_colors(2, :));
+set(plot(SW3), 'Color', swath_colors(3, :));
+set(plot(SW4), 'Color', swath_colors(4, :));
+set(plot(SW5), 'Color', swath_colors(5, :));
+set(plot(SW6), 'Color', swath_colors(6, :));
+set(plot(SW7), 'Color', swath_colors(7, :));
+hold off
+title('DEM with SWATHs')
+legend off;
+
+hold(ax1, 'on');
+
+scalebar_length_km = 250;                         % Length in kilometers
+scalebar_length_m = scalebar_length_km * 1000;   % Convert to meters
+
+% Get axis limits
+xlims = xlim(ax1);
+ylims = ylim(ax1);
+
+% Define position: 5% from bottom-left
+x_start = xlims(1) + 0.05 * range(xlims);
+x_end   = x_start + scalebar_length_m;
+y_pos   = ylims(1) + 0.05 * range(ylims);
+
+% Draw the scalebar
+line([x_start, x_end], [y_pos, y_pos], ...
+    'Color', 'k', 'LineWidth', 2, 'Parent', ax1);
+
+% Add label centered below the scalebar
+text(mean([x_start, x_end]), y_pos - 0.015 * range(ylims), ...
+    sprintf('%d km', scalebar_length_km), ...
+    'HorizontalAlignment', 'center', ...
+    'VerticalAlignment', 'top', ...
+    'FontSize', 9, ...
+    'Color', 'k', ...
+    'Parent', ax1);
+
+hold(ax1, 'off');
+
+gray = [0.6 0.6 0.6]; 
+
+nexttile(2)
+distx = SW1.distx;
+plot(distx, stat(SW1, {'prctile', 25}), '--', 'Color', gray); hold on;
+plot(distx, stat(SW1, {'prctile', 75}), '--', 'Color', gray);
+plot(distx, stat(SW1, {'prctile', 50}), '-', 'LineWidth', 1.5, 'Color', swath_colors(1, :));
+xlim([0 Lgroup1]); ylim([0 3]);
+xlabel('Distance along profile (m)'); ylabel('Terrain roughness');
+
+nexttile(3)
+distx = SW2.distx;
+plot(distx, stat(SW2, {'prctile', 25}), '--', 'Color', gray); hold on;
+plot(distx, stat(SW2, {'prctile', 75}), '--', 'Color', gray);
+plot(distx, stat(SW2, {'prctile', 50}), '-', 'LineWidth', 1.5, 'Color', swath_colors(2, :));
+xlim([0 Lgroup1]); ylim([0 3]);
+xlabel('Distance along profile (m)'); ylabel('Terrain roughness');
+
+nexttile(5)
+distx = SW3.distx;
+plot(distx, stat(SW3, {'prctile', 25}), '--', 'Color', gray); hold on;
+plot(distx, stat(SW3, {'prctile', 75}), '--', 'Color', gray);
+plot(distx, stat(SW3, {'prctile', 50}), '-', 'LineWidth', 1.5, 'Color', swath_colors(3, :));
+xlim([0 Lgroup1]); ylim([0 3]);
+xlabel('Distance along profile (m)'); ylabel('Terrain roughness');
+
+nexttile(6)
+distx = SW4.distx;
+plot(distx, stat(SW4, {'prctile', 25}), '--', 'Color', gray); hold on;
+plot(distx, stat(SW4, {'prctile', 75}), '--', 'Color', gray);
+plot(distx, stat(SW4, {'prctile', 50}), '-', 'LineWidth', 1.5, 'Color', swath_colors(4, :));
+xlim([0 Lgroup2]); ylim([0 3]);
+xlabel('Distance along profile (m)'); ylabel('Terrain roughness');
+
+nexttile(8)
+distx = SW5.distx;
+plot(distx, stat(SW5, {'prctile', 25}), '--', 'Color', gray); hold on;
+plot(distx, stat(SW5, {'prctile', 75}), '--', 'Color', gray);
+plot(distx, stat(SW5, {'prctile', 50}), '-', 'LineWidth', 1.5, 'Color', swath_colors(5, :));
+xlim([0 Lgroup2]); ylim([0 3]);
+xlabel('Distance along profile (m)'); ylabel('Terrain roughness');
+
+nexttile(9)
+distx = SW6.distx;
+plot(distx, stat(SW6, {'prctile', 25}), '--', 'Color', gray); hold on;
+plot(distx, stat(SW6, {'prctile', 75}), '--', 'Color', gray);
+plot(distx, stat(SW6, {'prctile', 50}), '-', 'LineWidth', 1.5, 'Color', swath_colors(6, :));
+xlim([0 Lgroup2]); ylim([0 3]);
+xlabel('Distance along profile (m)'); ylabel('Terrain roughness');
+
+nexttile(10, [1, 3])
+distx = SW7.distx;
+plot(distx, stat(SW7, {'prctile', 25}), '--', 'Color', gray); hold on;
+plot(distx, stat(SW7, {'prctile', 75}), '--', 'Color', gray);
+plot(distx, stat(SW7, {'prctile', 50}), '-', 'LineWidth', 1.5, 'Color', swath_colors(7, :));
+ylim([0 3]);
+xlabel('Distance along profile (m)');
+ylabel('Terrain roughness');
